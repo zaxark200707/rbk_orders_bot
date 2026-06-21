@@ -88,7 +88,11 @@ def handle_callbacks(call):
         return
 
     if data.startswith("delete_"):
-        order_id = int(data.split("_")[1])
+        try:
+            order_id = int(data.split("_")[1])
+        except:
+            bot.send_message(chat_id, "❌ Ошибка ID заказа.")
+            return
         conn = sqlite3.connect('orders.db')
         c = conn.cursor()
         c.execute("UPDATE orders SET status='archived' WHERE id=?", (order_id,))
@@ -99,7 +103,11 @@ def handle_callbacks(call):
         return
 
     if data.startswith("delete_archive_"):
-        order_id = int(data.split("_")[2])
+        try:
+            order_id = int(data.split("_")[2])
+        except:
+            bot.send_message(chat_id, "❌ Ошибка ID заказа.")
+            return
         conn = sqlite3.connect('orders.db')
         c = conn.cursor()
         c.execute("DELETE FROM orders WHERE id=?", (order_id,))
@@ -110,7 +118,11 @@ def handle_callbacks(call):
         return
 
     if data.startswith("show_"):
-        order_id = int(data.split("_")[1])
+        try:
+            order_id = int(data.split("_")[1])
+        except:
+            bot.send_message(chat_id, "❌ Ошибка ID заказа.")
+            return
         show_order_details(chat_id, order_id)
         return
 
