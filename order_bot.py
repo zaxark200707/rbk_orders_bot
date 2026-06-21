@@ -60,11 +60,11 @@ def get_range(length):
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("📋 Новый заказ", callback_data="new_order"))
-    markup.add(InlineKeyboardButton("📦 Принятые заказы", callback_data="my_orders"))
-    markup.add(InlineKeyboardButton("✅ Выполненные заказы", callback_data="archive"))
-    markup.add(InlineKeyboardButton("📌 Шаблоны", callback_data="templates"))
-    bot.send_message(message.chat.id, "🏢 Заказы РБК\nВыберите действие:", reply_markup=markup)
+    markup.add(InlineKeyboardButton("Новый заказ", callback_data="new_order"))
+    markup.add(InlineKeyboardButton("Принятые заказы", callback_data="my_orders"))
+    markup.add(InlineKeyboardButton("Выполненные заказы", callback_data="archive"))
+    markup.add(InlineKeyboardButton("Шаблоны", callback_data="templates"))
+    bot.send_message(message.chat.id, "Заказы РБК\nВыберите действие:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
@@ -97,7 +97,7 @@ def handle_callbacks(call):
         return
 
     if data.startswith("template_"):
-        template_id = data.split("_")[1]
+        template_id = data.split("_", 1)[1]
         send_template(chat_id, template_id)
         return
 
@@ -105,14 +105,14 @@ def handle_callbacks(call):
         try:
             order_id = int(data.split("_")[1])
         except:
-            bot.send_message(chat_id, "❌ Ошибка ID заказа.")
+            bot.send_message(chat_id, "Ошибка ID заказа.")
             return
         conn = sqlite3.connect('orders.db')
         c = conn.cursor()
         c.execute("UPDATE orders SET status='archived' WHERE id=?", (order_id,))
         conn.commit()
         conn.close()
-        bot.send_message(chat_id, "✅ Заказ выполнен и перемещён в архив.")
+        bot.send_message(chat_id, "Заказ выполнен и перемещён в архив.")
         show_orders(chat_id, status="active")
         return
 
@@ -120,14 +120,14 @@ def handle_callbacks(call):
         try:
             order_id = int(data.split("_")[1])
         except:
-            bot.send_message(chat_id, "❌ Ошибка ID заказа.")
+            bot.send_message(chat_id, "Ошибка ID заказа.")
             return
         conn = sqlite3.connect('orders.db')
         c = conn.cursor()
         c.execute("DELETE FROM orders WHERE id=?", (order_id,))
         conn.commit()
         conn.close()
-        bot.send_message(chat_id, "🗑 Заказ удалён навсегда.")
+        bot.send_message(chat_id, "Заказ удалён навсегда.")
         show_orders(chat_id, status="archived")
         return
 
@@ -135,7 +135,7 @@ def handle_callbacks(call):
         try:
             order_id = int(data.split("_")[1])
         except:
-            bot.send_message(chat_id, "❌ Ошибка ID заказа.")
+            bot.send_message(chat_id, "Ошибка ID заказа.")
             return
         show_order_details(chat_id, order_id)
         return
@@ -156,7 +156,7 @@ def handle_callbacks(call):
         bot.send_message(chat_id, "Введите количество щитов:")
         return
 
-    bot.send_message(chat_id, "❌ Неизвестная команда.")
+    bot.send_message(chat_id, "Неизвестная команда.")
 
 def show_templates(chat_id):
     markup = InlineKeyboardMarkup()
@@ -165,7 +165,7 @@ def show_templates(chat_id):
     markup.add(InlineKeyboardButton("Уточнить сорт", callback_data="template_grade"))
     markup.add(InlineKeyboardButton("Разница между сортами", callback_data="template_grade_diff"))
     markup.add(InlineKeyboardButton("Для фото", callback_data="template_photo"))
-    markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
+    markup.add(InlineKeyboardButton("Назад", callback_data="back_to_menu"))
     bot.send_message(chat_id, "Выберите шаблон:", reply_markup=markup)
 
 def send_template(chat_id, template_id):
@@ -212,10 +212,10 @@ def send_template(chat_id, template_id):
             "Чтобы я показал именно то, что вам нужно."
         )
     else:
-        text = "❌ Шаблон не найден."
+        text = "Шаблон не найден."
 
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("🔙 Назад к шаблонам", callback_data="back_to_templates"))
+    markup.add(InlineKeyboardButton("Назад к шаблонам", callback_data="back_to_templates"))
     bot.send_message(chat_id, text, reply_markup=markup)
 
 def show_order_details(chat_id, order_id):
@@ -226,14 +226,14 @@ def show_order_details(chat_id, order_id):
     conn.close()
 
     if not order:
-        bot.send_message(chat_id, "❌ Заказ не найден.")
+        bot.send_message(chat_id, "Заказ не найден.")
         return
 
     (name, phone, wood, length, width, thickness, grade, quantity, price_per_piece, total_price, prod_price_per_piece, total_prod_price, profit, status) = order
 
     range_key = get_range(length)
     if range_key is None:
-        bot.send_message(chat_id, "❌ Ошибка диапазона")
+        bot.send_message(chat_id, "Ошибка диапазона")
         return
 
     price_per_cube = PRICES[wood][range_key][grade]
@@ -241,36 +241,36 @@ def show_order_details(chat_id, order_id):
 
     status_name = "Принят" if status == "active" else "Выполнен"
     text = (
-        f"📋 Заказ #{order_id}\n"
+        f"Заказ #{order_id}\n"
         f"━━━━━━━━━━━━\n"
-        f"👤 Клиент: {name}\n"
-        f"📞 Телефон: {phone}\n"
-        f"🌳 Порода: {wood}\n"
-        f"📏 Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
-        f"🏷️ Сорт: {grade}\n"
-        f"📦 Количество: {quantity} шт\n"
-        f"📌 Статус: {status_name}\n"
+        f"Клиент: {name}\n"
+        f"Телефон: {phone}\n"
+        f"Порода: {wood}\n"
+        f"Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
+        f"Сорт: {grade}\n"
+        f"Количество: {quantity} шт\n"
+        f"Статус: {status_name}\n"
         f"━━━━━━━━━━━━\n"
-        f"💰 Цена куба (с наценкой, без НДС): {price_per_cube:,.0f} руб\n"
-        f"🧾 Цена куба (с наценкой, с НДС 22%): {price_per_cube * 1.22:,.0f} руб\n"
+        f"Цена куба (с наценкой, без НДС): {price_per_cube:,.0f} руб\n"
+        f"Цена куба (с наценкой, с НДС 22%): {price_per_cube * 1.22:,.0f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"🏭 Цена куба (производственная, без НДС): {production_price_per_cube:,.0f} руб\n"
-        f"🧾 Цена куба (производственная, с НДС 22%): {production_price_per_cube * 1.22:,.0f} руб\n"
+        f"Цена куба (производственная, без НДС): {production_price_per_cube:,.0f} руб\n"
+        f"Цена куба (производственная, с НДС 22%): {production_price_per_cube * 1.22:,.0f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"💰 Цена за 1 шт: {price_per_piece:.2f} руб\n"
-        f"🏭 Производственная цена за 1 шт: {prod_price_per_piece:.2f} руб\n"
+        f"Цена за 1 шт: {price_per_piece:.2f} руб\n"
+        f"Производственная цена за 1 шт: {prod_price_per_piece:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"💰 Общая сумма: {total_price:.2f} руб\n"
-        f"🏭 Общая производственная: {total_prod_price:.2f} руб\n"
-        f"💵 Твой доход: {profit:.2f} руб"
+        f"Общая сумма: {total_price:.2f} руб\n"
+        f"Общая производственная: {total_prod_price:.2f} руб\n"
+        f"Твой доход: {profit:.2f} руб"
     )
 
     markup = InlineKeyboardMarkup()
     if status == "active":
-        markup.add(InlineKeyboardButton("✅ Выполнен", callback_data=f"done_{order_id}"))
+        markup.add(InlineKeyboardButton("Выполнен", callback_data=f"done_{order_id}"))
     else:
-        markup.add(InlineKeyboardButton("🗑 Удалить навсегда", callback_data=f"del_{order_id}"))
-    markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
+        markup.add(InlineKeyboardButton("Удалить навсегда", callback_data=f"del_{order_id}"))
+    markup.add(InlineKeyboardButton("Назад", callback_data="back_to_menu"))
     bot.send_message(chat_id, text, reply_markup=markup)
 
 def show_orders(chat_id, status="active"):
@@ -281,7 +281,7 @@ def show_orders(chat_id, status="active"):
     conn.close()
 
     if not orders:
-        bot.send_message(chat_id, "📭 Заказов нет.")
+        bot.send_message(chat_id, "Заказов нет.")
         return
 
     markup = InlineKeyboardMarkup()
@@ -291,8 +291,8 @@ def show_orders(chat_id, status="active"):
         markup.add(InlineKeyboardButton(text, callback_data=f"show_{order_id}"))
 
     status_name = "Принятые" if status == "active" else "Выполненные"
-    markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
-    bot.send_message(chat_id, f"📦 {status_name} заказы:", reply_markup=markup)
+    markup.add(InlineKeyboardButton("Назад", callback_data="back_to_menu"))
+    bot.send_message(chat_id, f"{status_name} заказы:", reply_markup=markup)
 
 @bot.message_handler(func=lambda m: True)
 def handle_text(message):
@@ -319,19 +319,19 @@ def handle_text(message):
         return
 
     if "wood" not in data:
-        bot.send_message(chat_id, "❌ Сначала выберите породу через кнопку.")
+        bot.send_message(chat_id, "Сначала выберите породу через кнопку.")
         return
 
     if "length" not in data:
         try:
             length = float(text)
             if get_range(length) is None:
-                bot.send_message(chat_id, "❌ Длина должна быть от 260 до 3000 мм. Введите заново:")
+                bot.send_message(chat_id, "Длина должна быть от 260 до 3000 мм. Введите заново:")
                 return
             data["length"] = length
             bot.send_message(chat_id, "Введите ширину (мм):")
         except:
-            bot.send_message(chat_id, "❌ Введите число, например 560")
+            bot.send_message(chat_id, "Введите число, например 560")
         return
 
     if "width" not in data:
@@ -339,7 +339,7 @@ def handle_text(message):
             data["width"] = float(text)
             bot.send_message(chat_id, "Введите толщину (мм):")
         except:
-            bot.send_message(chat_id, "❌ Введите число, например 20")
+            bot.send_message(chat_id, "Введите число, например 20")
         return
 
     if "thickness" not in data:
@@ -350,11 +350,11 @@ def handle_text(message):
                 markup.add(InlineKeyboardButton(grade, callback_data=f"grade_{grade}"))
             bot.send_message(chat_id, "Выберите сорт:", reply_markup=markup)
         except:
-            bot.send_message(chat_id, "❌ Введите число")
+            bot.send_message(chat_id, "Введите число")
         return
 
     if "grade" not in data:
-        bot.send_message(chat_id, "❌ Сначала выберите сорт через кнопку.")
+        bot.send_message(chat_id, "Сначала выберите сорт через кнопку.")
         return
 
     if "quantity" not in data:
@@ -362,7 +362,7 @@ def handle_text(message):
             data["quantity"] = int(text)
             save_order(chat_id)
         except:
-            bot.send_message(chat_id, "❌ Введите целое число, например 5")
+            bot.send_message(chat_id, "Введите целое число, например 5")
         return
 
 def save_order(chat_id):
@@ -378,7 +378,7 @@ def save_order(chat_id):
 
     range_key = get_range(length)
     if range_key is None:
-        bot.send_message(chat_id, "❌ Ошибка диапазона")
+        bot.send_message(chat_id, "Ошибка диапазона")
         return
 
     price_per_cube = PRICES[wood][range_key][grade]
@@ -394,40 +394,40 @@ def save_order(chat_id):
     profit = total_price - total_production_price
 
     response = (
-        f"✅ Заказ сохранён!\n"
+        f"Заказ сохранён!\n"
         f"━━━━━━━━━━━━\n"
-        f"👤 Клиент: {client_name}\n"
-        f"📞 Телефон: {phone}\n"
-        f"🌳 Порода: {wood}\n"
-        f"📏 Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
-        f"🏷️ Сорт: {grade}\n"
-        f"📦 Количество: {quantity} шт\n"
+        f"Клиент: {client_name}\n"
+        f"Телефон: {phone}\n"
+        f"Порода: {wood}\n"
+        f"Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
+        f"Сорт: {grade}\n"
+        f"Количество: {quantity} шт\n"
         f"━━━━━━━━━━━━\n"
-        f"💰 С НАЦЕНКОЙ (твоя цена)\n"
+        f"С НАЦЕНКОЙ (твоя цена)\n"
         f"Цена куба: {price_per_cube:,.0f} руб\n"
         f"Цена куба с НДС 22%: {cube_price_with_nds:,.0f} руб\n"
         f"Цена за 1 шт: {price_per_piece:.2f} руб\n"
         f"Общая цена ({quantity} шт): {total_price:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"🏭 БЕЗ НАЦЕНКИ (производственная)\n"
+        f"БЕЗ НАЦЕНКИ (производственная)\n"
         f"Цена куба: {production_price_per_cube:,.0f} руб\n"
         f"Цена куба с НДС 22%: {production_cube_price_with_nds:,.0f} руб\n"
         f"Цена за 1 шт: {production_price_per_piece:.2f} руб\n"
         f"Общая цена ({quantity} шт): {total_production_price:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"💵 ТВОЙ ДОХОД\n"
+        f"ТВОЙ ДОХОД\n"
         f"Доход с заказа: {profit:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"🏦 СКОЛЬКО ПРОИЗВОДСТВУ\n"
+        f"СКОЛЬКО ПРОИЗВОДСТВУ\n"
         f"Сумма: {total_production_price:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"📩 ДЛЯ КЛИЕНТА (вставить в Авито)\n"
+        f"ДЛЯ КЛИЕНТА (вставить в Авито)\n"
         f"Щит: {wood}, сорт {grade}\n"
         f"Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
         f"Количество: {quantity} шт\n"
         f"Цена: {total_price:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"🏗 ПРОИЗВОДСТВЕННОЕ ЗАДАНИЕ\n"
+        f"ПРОИЗВОДСТВЕННОЕ ЗАДАНИЕ\n"
         f"Порода: {wood}\n"
         f"Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
         f"Сорт: {grade}\n"
@@ -447,8 +447,8 @@ def save_order(chat_id):
     conn.close()
 
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("📋 Новый заказ", callback_data="new_order"))
-    markup.add(InlineKeyboardButton("📦 Принятые заказы", callback_data="my_orders"))
+    markup.add(InlineKeyboardButton("Новый заказ", callback_data="new_order"))
+    markup.add(InlineKeyboardButton("Принятые заказы", callback_data="my_orders"))
     bot.send_message(chat_id, response, reply_markup=markup)
 
 print("Бот Заказы РБК запущен...")
