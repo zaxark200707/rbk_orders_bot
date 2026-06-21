@@ -3,11 +3,9 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import sqlite3
 import datetime
 
-# ===== ТОКЕН =====
 TOKEN = "8989910662:AAG-bn11gPpc52YCfH6SxM-iiJ28N2BsYMs"
 bot = telebot.TeleBot(TOKEN)
 
-# ===== БАЗА ДАННЫХ =====
 def init_db():
     conn = sqlite3.connect('orders.db')
     c = conn.cursor()
@@ -30,7 +28,6 @@ def init_db():
 
 init_db()
 
-# ===== ТАБЛИЦА ЦЕН =====
 PRICES = {
     "Бук": {
         (260, 990):   {"AB": 180000, "BB": 175000, "BC": 170000},
@@ -57,7 +54,6 @@ def get_range(length):
             return (low, high)
     return None
 
-# ===== КОМАНДА /start =====
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = InlineKeyboardMarkup()
@@ -66,7 +62,6 @@ def start(message):
     markup.add(InlineKeyboardButton("📂 Архив", callback_data="archive"))
     bot.send_message(message.chat.id, "🏢 Заказы РБК\nВыберите действие:", reply_markup=markup)
 
-# ===== ОБРАБОТКА КНОПОК =====
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     chat_id = call.message.chat.id
@@ -100,6 +95,17 @@ def handle_callbacks(call):
         show_orders(chat_id, status="active")
         return
 
+    if data.startswith("delete_archive_"):
+        order_id = int(data.split("_")[2])
+        conn = sqlite3.connect('orders.db')
+        c = conn.cursor()
+        c.execute("DELETE FROM orders WHERE id=?", (order_id,))
+        conn.commit()
+        conn.close()
+        bot.send_message(chat_id, "🗑 Заказ удалён навсегда.")
+        show_orders(chat_id, status="archived")
+        return
+
     if data.startswith("wood_"):
         wood = data.split("_")[1]
         if chat_id not in user_data:
@@ -118,11 +124,10 @@ def handle_callbacks(call):
 
     bot.send_message(chat_id, "❌ Неизвестная команда.")
 
-# ===== ПОКАЗАТЬ ЗАКАЗЫ =====
 def show_orders(chat_id, status="active"):
     conn = sqlite3.connect('orders.db')
     c = conn.cursor()
-    c.execute("SELECT id, client_name, wood, length, width, thickness, grade, price FROM orders WHERE status=?", (status,))
+    c.execute("SELECT id, client_name, phone, wood, length, width, thickness, grade, price FROM orders WHERE status=?", (status,))
     orders = c.fetchall()
     conn.close()
 
@@ -132,18 +137,19 @@ def show_orders(chat_id, status="active"):
 
     markup = InlineKeyboardMarkup()
     for order in orders:
-        order_id, name, wood, length, width, thickness, grade, price = order
-        text = f"{name} — {wood} {int(length)}×{int(width)}×{int(thickness)} — {price:.0f} руб"
+        order_id, name, phone, wood, length, width, thickness, grade, price = order
+        text = f"{name} ({phone}) — {wood} {int(length)}×{int(width)}×{int(thickness)} — {price:.0f} руб"
         if status == "active":
             markup.add(InlineKeyboardButton(text, callback_data=f"show_{order_id}"))
             markup.add(InlineKeyboardButton("🗑 Удалить", callback_data=f"delete_{order_id}"))
         else:
             markup.add(InlineKeyboardButton(text, callback_data=f"show_{order_id}"))
-    
-    markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
-    bot.send_message(chat_id, f"📦 {status.capitalize()} заказы:", reply_markup=markup)
+            markup.add(InlineKeyboardButton("🗑 Удалить навсегда", callback_data=f"delete_archive_{order_id}"))
 
-# ===== ОБРАБОТКА ТЕКСТА =====
+    status_name = "Активные" if status == "active" else "Архив"
+    markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
+    bot.send_message(chat_id, f"📦 {status_name} заказы:", reply_markup=markup)
+
 @bot.message_handler(func=lambda m: True)
 def handle_text(message):
     chat_id = message.chat.id
@@ -246,9 +252,10 @@ def save_order(chat_id):
     conn.commit()
     conn.close()
 
-    bot.send_message(chat_id, response)
-    start(call.message)
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("📋 Новый заказ", callback_data="new_order"))
+    markup.add(InlineKeyboardButton("📦 Мои заказы", callback_data="my_orders"))
+    bot.send_message(chat_id, response, reply_markup=markup)
 
-# ===== ЗАПУСК =====
 print("Бот Заказы РБК запущен...")
 bot.polling()
