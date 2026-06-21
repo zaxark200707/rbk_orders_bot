@@ -57,6 +57,12 @@ def get_range(length):
             return (low, high)
     return None
 
+def delete_previous(chat_id, message_id):
+    try:
+        bot.delete_message(chat_id, message_id)
+    except:
+        pass
+
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = InlineKeyboardMarkup()
@@ -64,22 +70,20 @@ def start(message):
     markup.add(InlineKeyboardButton("📦 Принятые заказы", callback_data="my_orders"))
     markup.add(InlineKeyboardButton("✅ Выполненные заказы", callback_data="archive"))
     markup.add(InlineKeyboardButton("📌 Шаблоны", callback_data="templates"))
-    bot.send_message(message.chat.id, "🏢 Заказы РБК\nВыберите действие:", reply_markup=markup)
+    sent = bot.send_message(message.chat.id, "🏢 Заказы РБК\nВыберите действие:", reply_markup=markup)
+    user_data[message.chat.id] = {"last_bot_message": sent.message_id}
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     chat_id = call.message.chat.id
     data = call.data
 
-    # Удаляем сообщение с кнопками
-    try:
-        bot.delete_message(chat_id, call.message.message_id)
-    except:
-        pass
+    delete_previous(chat_id, call.message.message_id)
 
     if data == "new_order":
         user_data[chat_id] = {}
-        bot.send_message(chat_id, "Введите имя клиента:")
+        sent = bot.send_message(chat_id, "Введите имя клиента:")
+        user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
     if data == "my_orders":
@@ -118,7 +122,8 @@ def handle_callbacks(call):
         c.execute("UPDATE orders SET status='archived' WHERE id=?", (order_id,))
         conn.commit()
         conn.close()
-        bot.send_message(chat_id, "✅ Заказ выполнен и перемещён в архив.")
+        sent = bot.send_message(chat_id, "✅ Заказ выполнен и перемещён в архив.")
+        user_data[chat_id]["last_bot_message"] = sent.message_id
         show_orders(chat_id, status="active")
         return
 
@@ -133,7 +138,8 @@ def handle_callbacks(call):
         c.execute("DELETE FROM orders WHERE id=?", (order_id,))
         conn.commit()
         conn.close()
-        bot.send_message(chat_id, "🗑 Заказ удалён навсегда.")
+        sent = bot.send_message(chat_id, "🗑 Заказ удалён навсегда.")
+        user_data[chat_id]["last_bot_message"] = sent.message_id
         show_orders(chat_id, status="archived")
         return
 
@@ -151,7 +157,8 @@ def handle_callbacks(call):
         if chat_id not in user_data:
             user_data[chat_id] = {}
         user_data[chat_id]["wood"] = wood
-        bot.send_message(chat_id, "Введите длину (мм):")
+        sent = bot.send_message(chat_id, "Введите длину (мм):")
+        user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
     if data.startswith("grade_"):
@@ -159,7 +166,8 @@ def handle_callbacks(call):
         if chat_id not in user_data:
             user_data[chat_id] = {}
         user_data[chat_id]["grade"] = grade
-        bot.send_message(chat_id, "Введите количество щитов:")
+        sent = bot.send_message(chat_id, "Введите количество щитов:")
+        user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
     bot.send_message(chat_id, "Неизвестная команда.")
@@ -172,9 +180,12 @@ def show_templates(chat_id):
     markup.add(InlineKeyboardButton("Разница между сортами", callback_data="template_grade_diff"))
     markup.add(InlineKeyboardButton("Для фото", callback_data="template_photo"))
     markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
-    bot.send_message(chat_id, "Выберите шаблон:", reply_markup=markup)
+    sent = bot.send_message(chat_id, "Выберите шаблон:", reply_markup=markup)
+    user_data[chat_id]["last_bot_message"] = sent.message_id
 
 def send_template(chat_id, template_id):
+    delete_previous(chat_id, user_data[chat_id].get("last_bot_message", 0))
+    
     if template_id == "price_no_data":
         text = (
             "Здравствуйте.\n\n"
@@ -222,9 +233,12 @@ def send_template(chat_id, template_id):
 
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("🔙 Назад к шаблонам", callback_data="back_to_templates"))
-    bot.send_message(chat_id, text, reply_markup=markup)
+    sent = bot.send_message(chat_id, text, reply_markup=markup)
+    user_data[chat_id]["last_bot_message"] = sent.message_id
 
 def show_order_details(chat_id, order_id):
+    delete_previous(chat_id, user_data[chat_id].get("last_bot_message", 0))
+    
     conn = sqlite3.connect('orders.db')
     c = conn.cursor()
     c.execute("SELECT client_name, phone, wood, length, width, thickness, grade, quantity, price_per_piece, total_price, production_price_per_piece, total_production_price, profit, status FROM orders WHERE id=?", (order_id,))
@@ -277,9 +291,12 @@ def show_order_details(chat_id, order_id):
     else:
         markup.add(InlineKeyboardButton("🗑 Удалить навсегда", callback_data=f"del_{order_id}"))
     markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
-    bot.send_message(chat_id, text, reply_markup=markup)
+    sent = bot.send_message(chat_id, text, reply_markup=markup)
+    user_data[chat_id]["last_bot_message"] = sent.message_id
 
 def show_orders(chat_id, status="active"):
+    delete_previous(chat_id, user_data[chat_id].get("last_bot_message", 0))
+    
     conn = sqlite3.connect('orders.db')
     c = conn.cursor()
     c.execute("SELECT id, client_name, phone, wood, length, width, thickness, grade, quantity, total_price FROM orders WHERE status=?", (status,))
@@ -287,7 +304,8 @@ def show_orders(chat_id, status="active"):
     conn.close()
 
     if not orders:
-        bot.send_message(chat_id, "📭 Заказов нет.")
+        sent = bot.send_message(chat_id, "📭 Заказов нет.")
+        user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
     markup = InlineKeyboardMarkup()
@@ -298,12 +316,18 @@ def show_orders(chat_id, status="active"):
 
     status_name = "Принятые" if status == "active" else "Выполненные"
     markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
-    bot.send_message(chat_id, f"📦 {status_name} заказы:", reply_markup=markup)
+    sent = bot.send_message(chat_id, f"📦 {status_name} заказы:", reply_markup=markup)
+    user_data[chat_id]["last_bot_message"] = sent.message_id
 
 @bot.message_handler(func=lambda m: True)
 def handle_text(message):
     chat_id = message.chat.id
     text = message.text.strip()
+
+    # Удаляем сообщение пользователя
+    delete_previous(chat_id, message.message_id)
+    # Удаляем предыдущее сообщение бота
+    delete_previous(chat_id, user_data.get(chat_id, {}).get("last_bot_message", 0))
 
     if chat_id not in user_data:
         start(message)
@@ -313,7 +337,8 @@ def handle_text(message):
 
     if "client_name" not in data:
         data["client_name"] = text
-        bot.send_message(chat_id, "Введите номер телефона клиента:")
+        sent = bot.send_message(chat_id, "Введите номер телефона клиента:")
+        user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
     if "phone" not in data:
@@ -321,7 +346,8 @@ def handle_text(message):
         markup = InlineKeyboardMarkup()
         for wood in PRICES.keys():
             markup.add(InlineKeyboardButton(wood, callback_data=f"wood_{wood}"))
-        bot.send_message(chat_id, "Выберите породу:", reply_markup=markup)
+        sent = bot.send_message(chat_id, "Выберите породу:", reply_markup=markup)
+        user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
     if "wood" not in data:
@@ -332,20 +358,25 @@ def handle_text(message):
         try:
             length = float(text)
             if get_range(length) is None:
-                bot.send_message(chat_id, "Длина должна быть от 260 до 3000 мм. Введите заново:")
+                sent = bot.send_message(chat_id, "Длина должна быть от 260 до 3000 мм. Введите заново:")
+                user_data[chat_id]["last_bot_message"] = sent.message_id
                 return
             data["length"] = length
-            bot.send_message(chat_id, "Введите ширину (мм):")
+            sent = bot.send_message(chat_id, "Введите ширину (мм):")
+            user_data[chat_id]["last_bot_message"] = sent.message_id
         except:
-            bot.send_message(chat_id, "Введите число, например 560")
+            sent = bot.send_message(chat_id, "Введите число, например 560")
+            user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
     if "width" not in data:
         try:
             data["width"] = float(text)
-            bot.send_message(chat_id, "Введите толщину (мм):")
+            sent = bot.send_message(chat_id, "Введите толщину (мм):")
+            user_data[chat_id]["last_bot_message"] = sent.message_id
         except:
-            bot.send_message(chat_id, "Введите число, например 20")
+            sent = bot.send_message(chat_id, "Введите число, например 20")
+            user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
     if "thickness" not in data:
@@ -354,9 +385,11 @@ def handle_text(message):
             markup = InlineKeyboardMarkup()
             for grade in ["AB", "BB", "BC"]:
                 markup.add(InlineKeyboardButton(grade, callback_data=f"grade_{grade}"))
-            bot.send_message(chat_id, "Выберите сорт:", reply_markup=markup)
+            sent = bot.send_message(chat_id, "Выберите сорт:", reply_markup=markup)
+            user_data[chat_id]["last_bot_message"] = sent.message_id
         except:
-            bot.send_message(chat_id, "Введите число")
+            sent = bot.send_message(chat_id, "Введите число")
+            user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
     if "grade" not in data:
@@ -368,7 +401,8 @@ def handle_text(message):
             data["quantity"] = int(text)
             save_order(chat_id)
         except:
-            bot.send_message(chat_id, "Введите целое число, например 5")
+            sent = bot.send_message(chat_id, "Введите целое число, например 5")
+            user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
 def save_order(chat_id):
@@ -455,7 +489,8 @@ def save_order(chat_id):
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("📋 Новый заказ", callback_data="new_order"))
     markup.add(InlineKeyboardButton("📦 Принятые заказы", callback_data="my_orders"))
-    bot.send_message(chat_id, response, reply_markup=markup)
+    sent = bot.send_message(chat_id, response, reply_markup=markup)
+    user_data[chat_id]["last_bot_message"] = sent.message_id
 
 print("Бот Заказы РБК запущен...")
 bot.polling()
