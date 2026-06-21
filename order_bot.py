@@ -303,18 +303,20 @@ def show_orders(chat_id, status="active"):
     orders = c.fetchall()
     conn.close()
 
+    status_name = "Принятые" if status == "active" else "Выполненные"
+    markup = InlineKeyboardMarkup()
+    
     if not orders:
-        sent = bot.send_message(chat_id, "📭 Заказов нет.")
+        markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
+        sent = bot.send_message(chat_id, f"📭 {status_name} заказов нет.", reply_markup=markup)
         user_data[chat_id]["last_bot_message"] = sent.message_id
         return
 
-    markup = InlineKeyboardMarkup()
     for order in orders:
         order_id, name, phone, wood, length, width, thickness, grade, quantity, total_price = order
         text = f"{name} ({phone}) — {wood} {int(length)}×{int(width)}×{int(thickness)} — {quantity} шт — {total_price:.0f} руб"
         markup.add(InlineKeyboardButton(text, callback_data=f"show_{order_id}"))
 
-    status_name = "Принятые" if status == "active" else "Выполненные"
     markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
     sent = bot.send_message(chat_id, f"📦 {status_name} заказы:", reply_markup=markup)
     user_data[chat_id]["last_bot_message"] = sent.message_id
