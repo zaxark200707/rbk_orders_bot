@@ -18,8 +18,11 @@ def init_db():
                   width REAL,
                   thickness REAL,
                   grade TEXT,
-                  price REAL,
-                  production_price REAL,
+                  quantity INTEGER,
+                  price_per_piece REAL,
+                  total_price REAL,
+                  production_price_per_piece REAL,
+                  total_production_price REAL,
                   profit REAL,
                   date TEXT,
                   status TEXT)''')
@@ -127,7 +130,7 @@ def handle_callbacks(call):
 def show_orders(chat_id, status="active"):
     conn = sqlite3.connect('orders.db')
     c = conn.cursor()
-    c.execute("SELECT id, client_name, phone, wood, length, width, thickness, grade, price FROM orders WHERE status=?", (status,))
+    c.execute("SELECT id, client_name, phone, wood, length, width, thickness, grade, quantity, total_price FROM orders WHERE status=?", (status,))
     orders = c.fetchall()
     conn.close()
 
@@ -137,8 +140,8 @@ def show_orders(chat_id, status="active"):
 
     markup = InlineKeyboardMarkup()
     for order in orders:
-        order_id, name, phone, wood, length, width, thickness, grade, price = order
-        text = f"{name} ({phone}) — {wood} {int(length)}×{int(width)}×{int(thickness)} — {price:.0f} руб"
+        order_id, name, phone, wood, length, width, thickness, grade, quantity, total_price = order
+        text = f"{name} ({phone}) — {wood} {int(length)}×{int(width)}×{int(thickness)} — {quantity} шт — {total_price:.0f} руб"
         if status == "active":
             markup.add(InlineKeyboardButton(text, callback_data=f"show_{order_id}"))
             markup.add(InlineKeyboardButton("🗑 Удалить", callback_data=f"delete_{order_id}"))
@@ -207,6 +210,16 @@ def handle_text(message):
             bot.send_message(chat_id, "Выберите сорт:", reply_markup=markup)
         except:
             bot.send_message(chat_id, "❌ Введите число")
+        return
+
+    if "quantity" not in data:
+        try:
+            data["quantity"] = int(text)
+            # Все данные собраны — сохраняем заказ
+            save_order(chat_id)
+        except:
+            bot.send_message(chat_id, "❌ Введите целое число, например 5")
+        return
 
 def save_order(chat_id):
     data = user_data[chat_id]
@@ -217,6 +230,7 @@ def save_order(chat_id):
     grade = data["grade"]
     client_name = data["client_name"]
     phone = data["phone"]
+    quantity = data["quantity"]
 
     range_key = get_range(length)
     if range_key is None:
@@ -225,11 +239,14 @@ def save_order(chat_id):
 
     price_per_cube = PRICES[wood][range_key][grade]
     production_price_per_cube = price_per_cube - 30000
+    cube_price_with_nds = price_per_cube * 1.22
 
     volume = (length / 1000) * (width / 1000) * (thickness / 1000)
-    price = volume * price_per_cube
-    production_price = volume * production_price_per_cube
-    profit = price - production_price
+    price_per_piece = volume * price_per_cube
+    production_price_per_piece = volume * production_price_per_cube
+    total_price = price_per_piece * quantity
+    total_production_price = production_price_per_piece * quantity
+    profit = total_price - total_production_price
 
     response = (
         f"✅ Заказ сохранён!\n"
@@ -239,16 +256,28 @@ def save_order(chat_id):
         f"🌳 Порода: {wood}\n"
         f"📏 Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
         f"🏷️ Сорт: {grade}\n"
+        f"📦 Количество: {quantity} шт\n"
         f"━━━━━━━━━━━━\n"
-        f"💰 Цена с наценкой: {price:.2f} руб.\n"
-        f"🏭 Производственная цена: {production_price:.2f} руб.\n"
-        f"💵 Твой доход: {profit:.2f} руб."
+        f"💰 Цена куба без НДС: {price_per_cube:,.0f} руб\n"
+        f"🧾 Цена куба с НДС 22%: {cube_price_with_nds:,.0f} руб\n"
+        f"━━━━━━━━━━━━\n"
+        f"💵 Цена за 1 шт: {price_per_piece:.2f} руб\n"
+        f"🏭 Производственная цена за 1 шт: {production_price_per_piece:.2f} руб\n"
+        f"━━━━━━━━━━━━\n"
+        f"💰 Общая цена ({quantity} шт): {total_price:.2f} руб\n"
+        f"🏭 Общая производственная цена: {total_production_price:.2f} руб\n"
+        f"💵 Твой доход с заказа: {profit:.2f} руб"
     )
 
     conn = sqlite3.connect('orders.db')
     c = conn.cursor()
-    c.execute("INSERT INTO orders (client_name, phone, wood, length, width, thickness, grade, price, production_price, profit, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              (client_name, phone, wood, length, width, thickness, grade, price, production_price, profit, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "active"))
+    c.execute("""INSERT INTO orders 
+                 (client_name, phone, wood, length, width, thickness, grade, quantity, 
+                  price_per_piece, total_price, production_price_per_piece, total_production_price, profit, date, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+              (client_name, phone, wood, length, width, thickness, grade, quantity,
+               price_per_piece, total_price, production_price_per_piece, total_production_price, profit,
+               datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "active"))
     conn.commit()
     conn.close()
 
