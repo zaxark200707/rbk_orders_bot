@@ -71,6 +71,12 @@ def handle_callbacks(call):
     chat_id = call.message.chat.id
     data = call.data
 
+    # Удаляем сообщение с кнопками
+    try:
+        bot.delete_message(chat_id, call.message.message_id)
+    except:
+        pass
+
     if data == "new_order":
         user_data[chat_id] = {}
         bot.send_message(chat_id, "Введите имя клиента:")
