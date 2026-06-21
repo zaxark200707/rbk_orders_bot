@@ -63,6 +63,7 @@ def start(message):
     markup.add(InlineKeyboardButton("📋 Новый заказ", callback_data="new_order"))
     markup.add(InlineKeyboardButton("📦 Принятые заказы", callback_data="my_orders"))
     markup.add(InlineKeyboardButton("✅ Выполненные заказы", callback_data="archive"))
+    markup.add(InlineKeyboardButton("📌 Шаблоны", callback_data="templates"))
     bot.send_message(message.chat.id, "🏢 Заказы РБК\nВыберите действие:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -85,6 +86,19 @@ def handle_callbacks(call):
 
     if data == "back_to_menu":
         start(call.message)
+        return
+
+    if data == "templates":
+        show_templates(chat_id)
+        return
+
+    if data == "back_to_templates":
+        show_templates(chat_id)
+        return
+
+    if data.startswith("template_"):
+        template_id = data.split("_")[1]
+        send_template(chat_id, template_id)
         return
 
     if data.startswith("done_"):
@@ -143,6 +157,66 @@ def handle_callbacks(call):
         return
 
     bot.send_message(chat_id, "❌ Неизвестная команда.")
+
+def show_templates(chat_id):
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("💰 Цена без данных", callback_data="template_price_no_data"))
+    markup.add(InlineKeyboardButton("📏 Размер без породы/сорта", callback_data="template_size_only"))
+    markup.add(InlineKeyboardButton("🏷️ Уточнить сорт", callback_data="template_grade"))
+    markup.add(InlineKeyboardButton("📊 Разница между сортами", callback_data="template_grade_diff"))
+    markup.add(InlineKeyboardButton("📸 Для фото", callback_data="template_photo"))
+    markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
+    bot.send_message(chat_id, "📌 Выберите шаблон:", reply_markup=markup)
+
+def send_template(chat_id, template_id):
+    if template_id == "price_no_data":
+        text = (
+            "Здравствуйте! 👋\n\n"
+            "Чтобы я назвал точную цену, напишите, пожалуйста, в одном сообщении:\n\n"
+            "📏 Размеры (пример: 1000×1000×20)\n"
+            "🌳 Породу (дуб / бук / ясень)\n"
+            "🏷️ Сорт (АВ / ВВ / ВС)\n\n"
+            "Тогда сразу скажу стоимость."
+        )
+    elif template_id == "size_only":
+        text = (
+            "Здравствуйте! Размер понял, но для точной цены нужны ещё порода и сорт.\n\n"
+            "Напишите:\n"
+            "🌳 породу (дуб/бук/ясень)\n"
+            "🏷️ сорт (АВ/ВВ/ВС)\n\n"
+            "Тогда скажу точную цену."
+        )
+    elif template_id == "grade":
+        text = (
+            "Здравствуйте! Отлично, с размерами и породой всё ясно.\n\n"
+            "Уточните сорт. От него зависит цена:\n\n"
+            "🔹 АВ — без сучков. Цветовая гамма ровная, красивая. Для видимой мебели, фасадов, столешниц, дверей.\n\n"
+            "🔸 ВВ — мелкие живые сросшиеся сучки. Цветовая гамма хорошая, но есть небольшие сучки. Для корпусной мебели, полок, внутренних деталей.\n\n"
+            "🔹 ВС — допускаются живые сросшиеся сучки. Цветовая гамма не соблюдается, есть разнотон. Для черновых работ и невидимых частей.\n\n"
+            "⚠️ Трещины и крупные сучки не допускаются ни в одном сорте."
+        )
+    elif template_id == "grade_diff":
+        text = (
+            "Коротко о сортах:\n\n"
+            "🔹 АВ — без сучков. Цветовая гамма ровная, красивая. Для видимой мебели, фасадов, столешниц.\n\n"
+            "🔸 ВВ — мелкие живые сросшиеся сучки. Цветовая гамма хорошая, но есть небольшие сучки. Для корпусной мебели, полок.\n\n"
+            "🔹 ВС — допускаются живые сросшиеся сучки. Цветовая гамма не соблюдается, есть разнотон. Для черновых работ.\n\n"
+            "⚠️ Трещины и крупные сучки не допускаются ни в одном сорте."
+        )
+    elif template_id == "photo":
+        text = (
+            "Фото могу скинуть.\n\n"
+            "Напишите, пожалуйста:\n"
+            "- породу\n"
+            "- сорт\n\n"
+            "Чтобы я показал именно то, что вам нужно."
+        )
+    else:
+        text = "❌ Шаблон не найден."
+
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("🔙 Назад к шаблонам", callback_data="back_to_templates"))
+    bot.send_message(chat_id, text, reply_markup=markup)
 
 def show_order_details(chat_id, order_id):
     conn = sqlite3.connect('orders.db')
