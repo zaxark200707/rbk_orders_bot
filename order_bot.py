@@ -122,7 +122,7 @@ def handle_callbacks(call):
         if chat_id not in user_data:
             user_data[chat_id] = {}
         user_data[chat_id]["grade"] = grade
-        save_order(chat_id)
+        bot.send_message(chat_id, "Введите количество щитов:")
         return
 
     bot.send_message(chat_id, "❌ Неизвестная команда.")
@@ -212,10 +212,13 @@ def handle_text(message):
             bot.send_message(chat_id, "❌ Введите число")
         return
 
+    if "grade" not in data:
+        bot.send_message(chat_id, "❌ Сначала выберите сорт через кнопку.")
+        return
+
     if "quantity" not in data:
         try:
             data["quantity"] = int(text)
-            # Все данные собраны — сохраняем заказ
             save_order(chat_id)
         except:
             bot.send_message(chat_id, "❌ Введите целое число, например 5")
