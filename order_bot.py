@@ -87,7 +87,7 @@ def handle_callbacks(call):
         start(call.message)
         return
 
-    if data.startswith("delete_"):
+    if data.startswith("done_"):
         try:
             order_id = int(data.split("_")[1])
         except:
@@ -98,13 +98,13 @@ def handle_callbacks(call):
         c.execute("UPDATE orders SET status='archived' WHERE id=?", (order_id,))
         conn.commit()
         conn.close()
-        bot.send_message(chat_id, "✅ Заказ перемещён в выполненные.")
+        bot.send_message(chat_id, "✅ Заказ выполнен и перемещён в архив.")
         show_orders(chat_id, status="active")
         return
 
-    if data.startswith("delete_archive_"):
+    if data.startswith("del_"):
         try:
-            order_id = int(data.split("_")[2])
+            order_id = int(data.split("_")[1])
         except:
             bot.send_message(chat_id, "❌ Ошибка ID заказа.")
             return
@@ -157,6 +157,14 @@ def show_order_details(chat_id, order_id):
 
     (name, phone, wood, length, width, thickness, grade, quantity, price_per_piece, total_price, prod_price_per_piece, total_prod_price, profit, status) = order
 
+    range_key = get_range(length)
+    if range_key is None:
+        bot.send_message(chat_id, "❌ Ошибка диапазона")
+        return
+
+    price_per_cube = PRICES[wood][range_key][grade]
+    production_price_per_cube = price_per_cube - 30000
+
     status_name = "Принят" if status == "active" else "Выполнен"
     text = (
         f"📋 Заказ #{order_id}\n"
@@ -169,6 +177,12 @@ def show_order_details(chat_id, order_id):
         f"📦 Количество: {quantity} шт\n"
         f"📌 Статус: {status_name}\n"
         f"━━━━━━━━━━━━\n"
+        f"💰 Цена куба (с наценкой, без НДС): {price_per_cube:,.0f} руб\n"
+        f"🧾 Цена куба (с наценкой, с НДС 22%): {price_per_cube * 1.22:,.0f} руб\n"
+        f"━━━━━━━━━━━━\n"
+        f"🏭 Цена куба (производственная, без НДС): {production_price_per_cube:,.0f} руб\n"
+        f"🧾 Цена куба (производственная, с НДС 22%): {production_price_per_cube * 1.22:,.0f} руб\n"
+        f"━━━━━━━━━━━━\n"
         f"💰 Цена за 1 шт: {price_per_piece:.2f} руб\n"
         f"🏭 Производственная цена за 1 шт: {prod_price_per_piece:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
@@ -179,9 +193,9 @@ def show_order_details(chat_id, order_id):
 
     markup = InlineKeyboardMarkup()
     if status == "active":
-        markup.add(InlineKeyboardButton("✅ Выполнен", callback_data=f"delete_{order_id}"))
+        markup.add(InlineKeyboardButton("✅ Выполнен", callback_data=f"done_{order_id}"))
     else:
-        markup.add(InlineKeyboardButton("🗑 Удалить навсегда", callback_data=f"delete_archive_{order_id}"))
+        markup.add(InlineKeyboardButton("🗑 Удалить навсегда", callback_data=f"del_{order_id}"))
     markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
     bot.send_message(chat_id, text, reply_markup=markup)
 
