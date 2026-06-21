@@ -60,11 +60,11 @@ def get_range(length):
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("Новый заказ", callback_data="new_order"))
-    markup.add(InlineKeyboardButton("Принятые заказы", callback_data="my_orders"))
-    markup.add(InlineKeyboardButton("Выполненные заказы", callback_data="archive"))
-    markup.add(InlineKeyboardButton("Шаблоны", callback_data="templates"))
-    bot.send_message(message.chat.id, "Заказы РБК\nВыберите действие:", reply_markup=markup)
+    markup.add(InlineKeyboardButton("📋 Новый заказ", callback_data="new_order"))
+    markup.add(InlineKeyboardButton("📦 Принятые заказы", callback_data="my_orders"))
+    markup.add(InlineKeyboardButton("✅ Выполненные заказы", callback_data="archive"))
+    markup.add(InlineKeyboardButton("📌 Шаблоны", callback_data="templates"))
+    bot.send_message(message.chat.id, "🏢 Заказы РБК\nВыберите действие:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
@@ -112,7 +112,7 @@ def handle_callbacks(call):
         c.execute("UPDATE orders SET status='archived' WHERE id=?", (order_id,))
         conn.commit()
         conn.close()
-        bot.send_message(chat_id, "Заказ выполнен и перемещён в архив.")
+        bot.send_message(chat_id, "✅ Заказ выполнен и перемещён в архив.")
         show_orders(chat_id, status="active")
         return
 
@@ -127,7 +127,7 @@ def handle_callbacks(call):
         c.execute("DELETE FROM orders WHERE id=?", (order_id,))
         conn.commit()
         conn.close()
-        bot.send_message(chat_id, "Заказ удалён навсегда.")
+        bot.send_message(chat_id, "🗑 Заказ удалён навсегда.")
         show_orders(chat_id, status="archived")
         return
 
@@ -165,7 +165,7 @@ def show_templates(chat_id):
     markup.add(InlineKeyboardButton("Уточнить сорт", callback_data="template_grade"))
     markup.add(InlineKeyboardButton("Разница между сортами", callback_data="template_grade_diff"))
     markup.add(InlineKeyboardButton("Для фото", callback_data="template_photo"))
-    markup.add(InlineKeyboardButton("Назад", callback_data="back_to_menu"))
+    markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
     bot.send_message(chat_id, "Выберите шаблон:", reply_markup=markup)
 
 def send_template(chat_id, template_id):
@@ -215,7 +215,7 @@ def send_template(chat_id, template_id):
         text = "Шаблон не найден."
 
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("Назад к шаблонам", callback_data="back_to_templates"))
+    markup.add(InlineKeyboardButton("🔙 Назад к шаблонам", callback_data="back_to_templates"))
     bot.send_message(chat_id, text, reply_markup=markup)
 
 def show_order_details(chat_id, order_id):
@@ -241,36 +241,36 @@ def show_order_details(chat_id, order_id):
 
     status_name = "Принят" if status == "active" else "Выполнен"
     text = (
-        f"Заказ #{order_id}\n"
+        f"📋 Заказ #{order_id}\n"
         f"━━━━━━━━━━━━\n"
-        f"Клиент: {name}\n"
-        f"Телефон: {phone}\n"
-        f"Порода: {wood}\n"
-        f"Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
-        f"Сорт: {grade}\n"
-        f"Количество: {quantity} шт\n"
-        f"Статус: {status_name}\n"
+        f"👤 Клиент: {name}\n"
+        f"📞 Телефон: {phone}\n"
+        f"🌳 Порода: {wood}\n"
+        f"📏 Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
+        f"🏷️ Сорт: {grade}\n"
+        f"📦 Количество: {quantity} шт\n"
+        f"📌 Статус: {status_name}\n"
         f"━━━━━━━━━━━━\n"
-        f"Цена куба (с наценкой, без НДС): {price_per_cube:,.0f} руб\n"
-        f"Цена куба (с наценкой, с НДС 22%): {price_per_cube * 1.22:,.0f} руб\n"
+        f"💰 Цена куба (с наценкой, без НДС): {price_per_cube:,.0f} руб\n"
+        f"🧾 Цена куба (с наценкой, с НДС 22%): {price_per_cube * 1.22:,.0f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"Цена куба (производственная, без НДС): {production_price_per_cube:,.0f} руб\n"
-        f"Цена куба (производственная, с НДС 22%): {production_price_per_cube * 1.22:,.0f} руб\n"
+        f"🏭 Цена куба (производственная, без НДС): {production_price_per_cube:,.0f} руб\n"
+        f"🧾 Цена куба (производственная, с НДС 22%): {production_price_per_cube * 1.22:,.0f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"Цена за 1 шт: {price_per_piece:.2f} руб\n"
-        f"Производственная цена за 1 шт: {prod_price_per_piece:.2f} руб\n"
+        f"💰 Цена за 1 шт: {price_per_piece:.2f} руб\n"
+        f"🏭 Производственная цена за 1 шт: {prod_price_per_piece:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"Общая сумма: {total_price:.2f} руб\n"
-        f"Общая производственная: {total_prod_price:.2f} руб\n"
-        f"Твой доход: {profit:.2f} руб"
+        f"💰 Общая сумма: {total_price:.2f} руб\n"
+        f"🏭 Общая производственная: {total_prod_price:.2f} руб\n"
+        f"💵 Твой доход: {profit:.2f} руб"
     )
 
     markup = InlineKeyboardMarkup()
     if status == "active":
-        markup.add(InlineKeyboardButton("Выполнен", callback_data=f"done_{order_id}"))
+        markup.add(InlineKeyboardButton("✅ Выполнен", callback_data=f"done_{order_id}"))
     else:
-        markup.add(InlineKeyboardButton("Удалить навсегда", callback_data=f"del_{order_id}"))
-    markup.add(InlineKeyboardButton("Назад", callback_data="back_to_menu"))
+        markup.add(InlineKeyboardButton("🗑 Удалить навсегда", callback_data=f"del_{order_id}"))
+    markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
     bot.send_message(chat_id, text, reply_markup=markup)
 
 def show_orders(chat_id, status="active"):
@@ -281,7 +281,7 @@ def show_orders(chat_id, status="active"):
     conn.close()
 
     if not orders:
-        bot.send_message(chat_id, "Заказов нет.")
+        bot.send_message(chat_id, "📭 Заказов нет.")
         return
 
     markup = InlineKeyboardMarkup()
@@ -291,8 +291,8 @@ def show_orders(chat_id, status="active"):
         markup.add(InlineKeyboardButton(text, callback_data=f"show_{order_id}"))
 
     status_name = "Принятые" if status == "active" else "Выполненные"
-    markup.add(InlineKeyboardButton("Назад", callback_data="back_to_menu"))
-    bot.send_message(chat_id, f"{status_name} заказы:", reply_markup=markup)
+    markup.add(InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu"))
+    bot.send_message(chat_id, f"📦 {status_name} заказы:", reply_markup=markup)
 
 @bot.message_handler(func=lambda m: True)
 def handle_text(message):
@@ -394,40 +394,40 @@ def save_order(chat_id):
     profit = total_price - total_production_price
 
     response = (
-        f"Заказ сохранён!\n"
+        f"✅ Заказ сохранён!\n"
         f"━━━━━━━━━━━━\n"
-        f"Клиент: {client_name}\n"
-        f"Телефон: {phone}\n"
-        f"Порода: {wood}\n"
-        f"Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
-        f"Сорт: {grade}\n"
-        f"Количество: {quantity} шт\n"
+        f"👤 Клиент: {client_name}\n"
+        f"📞 Телефон: {phone}\n"
+        f"🌳 Порода: {wood}\n"
+        f"📏 Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
+        f"🏷️ Сорт: {grade}\n"
+        f"📦 Количество: {quantity} шт\n"
         f"━━━━━━━━━━━━\n"
-        f"С НАЦЕНКОЙ (твоя цена)\n"
+        f"💰 С НАЦЕНКОЙ (твоя цена)\n"
         f"Цена куба: {price_per_cube:,.0f} руб\n"
         f"Цена куба с НДС 22%: {cube_price_with_nds:,.0f} руб\n"
         f"Цена за 1 шт: {price_per_piece:.2f} руб\n"
         f"Общая цена ({quantity} шт): {total_price:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"БЕЗ НАЦЕНКИ (производственная)\n"
+        f"🏭 БЕЗ НАЦЕНКИ (производственная)\n"
         f"Цена куба: {production_price_per_cube:,.0f} руб\n"
         f"Цена куба с НДС 22%: {production_cube_price_with_nds:,.0f} руб\n"
         f"Цена за 1 шт: {production_price_per_piece:.2f} руб\n"
         f"Общая цена ({quantity} шт): {total_production_price:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"ТВОЙ ДОХОД\n"
+        f"💵 ТВОЙ ДОХОД\n"
         f"Доход с заказа: {profit:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"СКОЛЬКО ПРОИЗВОДСТВУ\n"
+        f"🏦 СКОЛЬКО ПРОИЗВОДСТВУ\n"
         f"Сумма: {total_production_price:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"ДЛЯ КЛИЕНТА (вставить в Авито)\n"
+        f"📩 ДЛЯ КЛИЕНТА (вставить в Авито)\n"
         f"Щит: {wood}, сорт {grade}\n"
         f"Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
         f"Количество: {quantity} шт\n"
         f"Цена: {total_price:.2f} руб\n"
         f"━━━━━━━━━━━━\n"
-        f"ПРОИЗВОДСТВЕННОЕ ЗАДАНИЕ\n"
+        f"🏗 ПРОИЗВОДСТВЕННОЕ ЗАДАНИЕ\n"
         f"Порода: {wood}\n"
         f"Размер: {int(length)}×{int(width)}×{int(thickness)} мм\n"
         f"Сорт: {grade}\n"
@@ -447,8 +447,8 @@ def save_order(chat_id):
     conn.close()
 
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("Новый заказ", callback_data="new_order"))
-    markup.add(InlineKeyboardButton("Принятые заказы", callback_data="my_orders"))
+    markup.add(InlineKeyboardButton("📋 Новый заказ", callback_data="new_order"))
+    markup.add(InlineKeyboardButton("📦 Принятые заказы", callback_data="my_orders"))
     bot.send_message(chat_id, response, reply_markup=markup)
 
 print("Бот Заказы РБК запущен...")
