@@ -6,9 +6,6 @@ import datetime
 TOKEN = "8989910662:AAG-bn11gPpc52YCfH6SxM-iiJ28N2BsYMs"
 bot = telebot.TeleBot(TOKEN)
 
-# Отключаем вебхук перед запуском
-bot.remove_webhook()
-
 def init_db():
     conn = sqlite3.connect('orders.db')
     c = conn.cursor()
@@ -329,7 +326,9 @@ def handle_text(message):
     chat_id = message.chat.id
     text = message.text.strip()
 
+    # Удаляем сообщение пользователя
     delete_previous(chat_id, message.message_id)
+    # Удаляем предыдущее сообщение бота
     delete_previous(chat_id, user_data.get(chat_id, {}).get("last_bot_message", 0))
 
     if chat_id not in user_data:
